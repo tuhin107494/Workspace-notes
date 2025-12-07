@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Note, Workspace } from '../types';
-import { getWorkspaces, getWorkspaceNotes, createWorkspace, deleteNote } from '../services/mockData';
+import { getWorkspaces, getWorkspaceNotes, createWorkspace, deleteNote } from '../services/apiClient';
 import NoteCard from '../components/NoteCard';
 import { getAvatarColor } from '../utils/colors';
 
@@ -19,13 +19,22 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ onEditNote }) =
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   // Initial Load of Workspaces
   useEffect(() => {
-    getWorkspaces().then(data => {
-      setWorkspaces(data);
-      if (data.length > 0) setSelectedWorkspace(data[0].id);
-    });
+    (async () => {
+      try {
+        const { items, next_cursor } = await getWorkspaces();
+        setWorkspaces(items || []);
+        setNextCursor(next_cursor ?? null);
+        if ((items || []).length > 0) setSelectedWorkspace(items[0].id);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load workspaces', err);
+        setWorkspaces([]);
+      }
+    })();
   }, []);
 
   // Load Notes when workspace or search changes
@@ -45,6 +54,7 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ onEditNote }) =
     setIsCreating(true);
     try {
       const newWs = await createWorkspace(newWorkspaceName);
+      // createWorkspace returns a workspace object (unwrapped)
       setWorkspaces([newWs, ...workspaces]);
       setSelectedWorkspace(newWs.id);
       setShowCreateModal(false);
@@ -94,15 +104,16 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ onEditNote }) =
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-bold text-xs shadow-sm ${getAvatarColor(ws.name)}`}>
-                  {ws.name.substring(0, 2).toUpperCase()}
+                {/** Safe display name to avoid runtime errors when `name` is missing */}
+                <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-bold text-xs shadow-sm ${getAvatarColor(ws.name || 'Untitled')}`}>
+                  {(ws.name || 'Untitled').substring(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
-                    <span className="truncate block">{ws.name}</span>
+                    <span className="truncate block">{ws.name || 'Untitled'}</span>
                   </div>
                   <span className={`text-xs block mt-0.5 truncate ${selectedWorkspace === ws.id ? 'text-indigo-500' : 'text-slate-400 group-hover:text-slate-500'}`}>
-                    {ws.noteCount} notes
+                    {typeof ws.noteCount === 'number' ? `${ws.noteCount} notes` : '0 notes'}
                   </span>
                 </div>
               </div>
@@ -117,12 +128,12 @@ const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({ onEditNote }) =
         {/* Toolbar */}
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white sticky top-0 z-10">
           <div className="flex items-center gap-4 w-full sm:w-auto">
-             <div className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center text-white font-bold shadow-md ${selectedWorkspaceObj ? getAvatarColor(selectedWorkspaceObj.name) : 'bg-slate-400'}`}>
-                {selectedWorkspaceObj?.name.substring(0, 1).toUpperCase()}
+             <div className={`hidden sm:flex w-10 h-10 rounded-xl items-center justify-center text-white font-bold shadow-md ${selectedWorkspaceObj && selectedWorkspaceObj.name ? getAvatarColor(selectedWorkspaceObj.name) : 'bg-slate-400'}`}>
+               {selectedWorkspaceObj && selectedWorkspaceObj.name ? selectedWorkspaceObj.name.substring(0, 1).toUpperCase() : ''}
              </div>
              <div>
-                <h1 className="text-xl font-bold text-slate-900 leading-tight truncate max-w-[200px] sm:max-w-xs">{selectedWorkspaceObj?.name}</h1>
-                <p className="text-xs text-slate-500">Workspace Dashboard</p>
+               <h1 className="text-xl font-bold text-slate-900 leading-tight truncate max-w-[200px] sm:max-w-xs">{selectedWorkspaceObj?.name || 'Workspace'}</h1>
+               <p className="text-xs text-slate-500">Workspace Dashboard</p>
              </div>
           </div>
 

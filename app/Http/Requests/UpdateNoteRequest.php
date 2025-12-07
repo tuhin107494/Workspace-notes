@@ -11,7 +11,14 @@ class UpdateNoteRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        // Only the owner of the note may update it
+        $user = auth()->user();
+        if (!$user) return false;
+
+        $note = $this->route('note');
+        if (!$note) return false;
+
+        return ($note->user_id ?? $note->author_id ?? null) == $user->id;
     }
 
     /**
@@ -24,6 +31,7 @@ class UpdateNoteRequest extends FormRequest
             'title'   => 'sometimes|string|max:255',
             'content' => 'sometimes|string',
             'type'    => 'sometimes|in:public,private',
+            'is_draft'=> 'sometimes|boolean',
             'tags'    => 'sometimes|array',
             'tags.*'  => 'string|max:50'
         ];

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login, register } from '../services/mockData';
+import { loginUser, registerUser } from '../auth';
 import { User } from '../types';
 
 interface AuthProps {
@@ -10,6 +10,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [view, setView] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   // Login State
   const [email, setEmail] = useState('alex@startup.com');
@@ -20,16 +21,24 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [companyName, setCompanyName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setLoading(true);
     try {
-      const user = await login(email, password);
+      const user = await loginUser(email, password);
       onLogin(user);
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      // show structured errors if present
+      if (err?.errors) {
+        setFieldErrors(err.errors);
+        setError(err.message || 'Login failed');
+      } else {
+        setError(err.message || "Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -38,12 +47,32 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+    if (name.trim().length < 6) {
+      setError('Full name must be at least 4 characters');
+      return;
+    }
+    if (companyName.trim().length < 6) {
+      setError('Company name must be at least 6 characters');
+      return;
+    }
+    if (regPassword !== regPasswordConfirm) {
+      setError('Passwords do not match');
+      return;
+    }
     setLoading(true);
     try {
-      const user = await register(name, regEmail, regPassword, companyName);
+      // mockData.register expects (name, email, password, companyName)
+      const user = await registerUser(name, regEmail, regPassword, regPasswordConfirm, companyName);
       onLogin(user);
     } catch (err: any) {
-      setError(err.message || "Registration failed");
+      // show structured validation errors if provided by backend
+      if (err?.errors) {
+        setFieldErrors(err.errors);
+        setError(err.message || 'Registration failed');
+      } else {
+        setError(err.message || "Registration failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -134,10 +163,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 <input
                   type="text"
                   required
+                  minLength={4}
                   value={name}
                   onChange={e => setName(e.target.value)}
                   className="mt-1 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
+                {fieldErrors?.name && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.name[0]}</p>
+                )}
               </div>
 
               <div>
@@ -145,10 +178,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 <input
                   type="text"
                   required
+                  minLength={6}
                   value={companyName}
                   onChange={e => setCompanyName(e.target.value)}
                   className="mt-1 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
+                {fieldErrors?.company_name && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.company_name[0]}</p>
+                )}
               </div>
 
               <div>
@@ -160,6 +197,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   onChange={e => setRegEmail(e.target.value)}
                   className="mt-1 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
+                {fieldErrors?.email && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.email[0]}</p>
+                )}
               </div>
 
               <div>
@@ -172,6 +212,24 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   onChange={e => setRegPassword(e.target.value)}
                   className="mt-1 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
+                {fieldErrors?.password && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.password[0]}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Confirm Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={regPasswordConfirm}
+                  onChange={e => setRegPasswordConfirm(e.target.value)}
+                  className="mt-1 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+                {fieldErrors?.password_confirmation && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.password_confirmation[0]}</p>
+                )}
               </div>
 
               <div>
@@ -200,7 +258,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
             <div className="mt-6 text-center">
               <button
-                onClick={() => setView(view === 'login' ? 'register' : 'login')}
+                onClick={() => {
+                  setFieldErrors({});
+                  setError('');
+                  setView(view === 'login' ? 'register' : 'login');
+                }}
                 className="text-indigo-600 hover:text-indigo-500 font-medium text-sm transition-colors"
               >
                 {view === 'login' ? 'Create an account' : 'Sign in instead'}

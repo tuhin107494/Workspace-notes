@@ -1,4 +1,4 @@
-export const getTagColor = (tag: string) => {
+export const getTagColor = (tag?: string) => {
   const colors = [
     'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/10',
     'bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/10',
@@ -15,23 +15,26 @@ export const getTagColor = (tag: string) => {
     'bg-pink-50 text-pink-700 ring-1 ring-inset ring-pink-700/10',
     'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-700/10',
   ];
+  const key = (tag || '').toString();
   let hash = 0;
-  for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < key.length; i++) {
+    hash = key.charCodeAt(i) + ((hash << 5) - hash);
   }
   return colors[Math.abs(hash) % colors.length];
 };
 
-export const getAvatarColor = (name: string) => {
+export const getAvatarColor = (name?: string) => {
     const colors = [
         'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-500', 
         'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 
         'bg-indigo-500', 'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500', 
         'bg-pink-500', 'bg-rose-500'
     ];
+    const key = (name || '').toString();
+    if (key.length === 0) return 'bg-slate-400';
     let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    for (let i = 0; i < key.length; i++) {
+      hash = key.charCodeAt(i) + ((hash << 5) - hash);
     }
     return colors[Math.abs(hash) % colors.length];
 }
