@@ -5,7 +5,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Note;
- 
+
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use App\Services\VoteService;
@@ -41,7 +41,7 @@ class NoteController extends Controller
             'title' => $requestedData['title'],
             'content' => $requestedData['content'],
             'type' => $requestedData['type'],
-            'is_draft' => isset($requestedData['is_draft']) ? (bool)$requestedData['is_draft'] : true,
+            'is_draft' => isset($requestedData['is_draft']) ? (bool) $requestedData['is_draft'] : true,
             'user_id' => auth()->id(),
         ]);
 
@@ -97,7 +97,7 @@ class NoteController extends Controller
         ]);
 
         $user = $request->user('api');
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Authentication required'], 401);
         }
 
@@ -127,7 +127,7 @@ class NoteController extends Controller
             $user = $request->user('api');
             if ($user) {
                 $ws = Workspace::find($workspaceParam);
-                if (! $ws || $ws->user_id !== $user->id) {
+                if (!$ws || $ws->user_id !== $user->id) {
                     $query->where('is_draft', false);
                 }
             } else {
@@ -147,8 +147,10 @@ class NoteController extends Controller
             $query->where('title', 'like', '%' . $request->search . '%');
         }
 
-        // Sorting by upvotes/downvotes (prefer Redis index)
-        if ($request->has('sort') && $request->sort === 'upvotes') {
+
+        $sort = $request->query('sort');
+
+        if ($sort === 'upvotes') {
             $rankingKey = $workspaceParam ? "workspace:{$workspaceParam}:notes:score" : 'notes:score';
             try {
                 $ids = Redis::zrevrange($rankingKey, 0, $perPage - 1);
@@ -162,19 +164,23 @@ class NoteController extends Controller
                     ->get()
                     ->values();
 
-                // Reorder notes to match Redis ranking
                 $ordered = collect($ids)->map(fn($id) => $notes->firstWhere('id', $id))->filter()->values();
-
                 $nextCursor = $ordered->last()?->id;
                 return ['items' => $ordered, 'next_cursor' => $nextCursor, 'per_page' => $perPage];
             }
 
-            // fallback to DB counts
+            // fallback to DB
             $query->withCount(['votes as upvotes_count' => fn($q) => $q->where('vote', 'up')])
                 ->orderBy('upvotes_count', 'desc');
-        } elseif ($request->has('sort') && $request->sort === 'downvotes') {
+        } elseif ($sort === 'downvotes') {
             $query->withCount(['votes as downvotes_count' => fn($q) => $q->where('vote', 'down')])
                 ->orderBy('downvotes_count', 'desc');
+        } elseif ($sort === 'new') {
+            $query->orderBy('created_at', 'desc'); // newest first
+        } elseif ($sort === 'old') {
+            $query->orderBy('created_at', 'asc'); // oldest first
+        } else {
+            $query->orderBy('id', 'asc'); // default fallback
         }
 
         $notes = $query->limit($perPage)->get();
