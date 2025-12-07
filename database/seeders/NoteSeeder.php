@@ -23,7 +23,7 @@ class NoteSeeder extends Seeder
                     'user_id' => $ws->user_id,
                     'title' => ucfirst($faker->words(5, true)),
                     'content' => $faker->paragraphs(3, true),
-                    'type' => $faker->randomElement(['public','private','internal']),
+                    'type' => $faker->randomElement(['public','private']),
                     'is_draft' => $faker->boolean(20),
                 ]);
 

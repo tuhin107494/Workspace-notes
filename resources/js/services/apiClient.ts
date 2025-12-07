@@ -39,12 +39,15 @@ export async function getWorkspaces() {
 
 export async function getWorkspaceNotes(workspaceId: string, search = '') {
   const params: any = {};
+  console.log("Fetching notes for workspace:", workspaceId, "with search:", search);
   if (search) params.search = search;
   const resp = await authFetch(`/workspaces/${workspaceId}/notes`, { method: 'get', params });
   const payload = resp?.data ?? resp;
   const items = Array.isArray(payload?.data) ? payload.data : (Array.isArray(payload) ? payload : []);
   return items.map(mapNoteResource);
 }
+
+
 
 function mapNoteResource(r: any) {
   // r matches NoteResource shape from backend
