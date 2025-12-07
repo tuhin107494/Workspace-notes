@@ -8,7 +8,9 @@ import SystemDesign from './components/SystemDesign';
 import { User } from './types';
 import { logout } from './services/mockData';
 
-export default function App() {
+const App = () => {
+
+  console.log("Rendering App component");
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'public' | 'workspace'>('workspace');
   const [view, setView] = useState<'list' | 'editor'>('list');
@@ -40,10 +42,13 @@ export default function App() {
   };
 
   if (!user) {
+    console.log("No user logged in, showing Auth page");
     return <Auth onLogin={handleLogin} />;
   }
 
   return (
+    
+
     <Layout activeTab={activeTab} onNavigate={handleNavigate} user={user} onLogout={handleLogout}>
       {view === 'list' && activeTab === 'public' && (
         <PublicDirectory />
@@ -66,3 +71,6 @@ export default function App() {
     </Layout>
   );
 }
+
+
+export default App;
