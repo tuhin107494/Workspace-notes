@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Note, NoteType, NoteHistory } from '../types';
-import { getNoteById, saveNote, restoreNoteHistory } from '../services/mockData';
-import { generateNoteContent } from '../services/geminiService';
+import { getNoteById, saveNote } from '../services/apiClient';
 import { getTagColor } from '../utils/colors';
 
 interface NoteEditorProps {
@@ -30,7 +29,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, workspaceId, onBack }) 
       getNoteById(noteId).then(note => {
         if (note) {
           setFormData(note);
-          setHistory(note.history || []);
+          const h = note.history || [];
+          setHistory(h);
+          if (h.length > 0) setShowHistory(true);
         }
       }).finally(() => setLoading(false));
     } else {
@@ -48,7 +49,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, workspaceId, onBack }) 
       });
       // Update local state to reflect saved version
       setFormData(saved);
-      setHistory(saved.history || []);
+      const h = saved.history || [];
+      setHistory(h);
+      if (h.length > 0) setShowHistory(true);
     } catch (e) {
       alert("Error saving note");
     } finally {
@@ -59,38 +62,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, workspaceId, onBack }) 
   const handleRestore = async (historyId: string) => {
     if (!window.confirm("Restore this version? Current content will be saved to history.")) return;
     if (!noteId) return;
-
-    setLoading(true);
-    try {
-      const restored = await restoreNoteHistory(noteId, historyId);
-      setFormData(restored);
-      setHistory(restored.history);
-    } catch (e) {
-      alert("Failed to restore");
-    } finally {
-      setLoading(false);
-    }
+    // Restore via API is not implemented yet on the server. Show message.
+    alert('Restore from history is not available yet.');
   };
 
-  // const handleAiGenerate = async (type: 'expand' | 'fix' | 'summarize') => {
-  //   if (!formData.title) {
-  //       alert("Please add a title first.");
-  //       return;
-  //   }
-  //   setAiLoading(true);
-  //   try {
-  //     const result = await generateNoteContent(formData.title!, formData.content || '', type);
-  //     if (type === 'summarize') {
-  //       alert("Summary:\n" + result);
-  //     } else {
-  //       setFormData(prev => ({ ...prev, content: type === 'expand' ? (prev.content + "\n\n" + result) : result }));
-  //     }
-  //   } catch (e) {
-  //     alert("AI Generation failed. Check console or ensure API Key is set.");
-  //   } finally {
-  //     setAiLoading(false);
-  //   }
-  // };
 
   if (loading) return <div className="p-10 text-center text-slate-500">Loading editor...</div>;
 
@@ -168,23 +143,6 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ noteId, workspaceId, onBack }) 
           </div>
 
           <div className="relative group">
-             {/* AI Toolbar */}
-             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 flex gap-2 z-10">
-                <button 
-                  // onClick={() => handleAiGenerate('fix')} 
-                  disabled={aiLoading}
-                  className="bg-white/90 backdrop-blur border border-indigo-100 text-indigo-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm hover:bg-indigo-50 hover:shadow-md flex items-center gap-1.5 transition-all"
-                >
-                  <span>✨</span> Fix Grammar
-                </button>
-                <button 
-                  // onClick={() => handleAiGenerate('expand')} 
-                  disabled={aiLoading}
-                  className="bg-white/90 backdrop-blur border border-indigo-100 text-indigo-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm hover:bg-indigo-50 hover:shadow-md flex items-center gap-1.5 transition-all"
-                >
-                  <span>🚀</span> Continue Writing
-                </button>
-             </div>
 
              <textarea
                value={formData.content}

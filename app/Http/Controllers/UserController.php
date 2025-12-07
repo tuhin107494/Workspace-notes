@@ -2,8 +2,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+ 
 use App\Models\Workspace;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\LoginUserRequest;
 use App\Http\Requests\UpdateUserRequest;
@@ -21,16 +23,6 @@ class UserController extends Controller
             'email' => $data['email'],
             'password' => bcrypt($data['password']),
         ]);
-
-        // Create a default workspace for the new user's company
-        try {
-            Workspace::create([
-                'user_id' => $user->id,
-                'name' => $data['company_name'] ? $data['company_name'] . ' Workspace' : 'Default Workspace',
-            ]);
-        } catch (\Throwable $e) {
-            // Don't block registration on workspace creation failure
-        }
 
         $token = JWTAuth::fromUser($user);
         return response()->json(['user'=>$user, 'token'=>$token]);

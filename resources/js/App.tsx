@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import PublicDirectory from './pages/PublicDirectory';
 import WorkspaceDashboard from './pages/WorkspaceDashboard';
@@ -6,7 +6,7 @@ import NoteEditor from './pages/NoteEditor';
 import Auth from './pages/Auth';
 import SystemDesign from './components/SystemDesign';
 import { User } from './types';
-import { logout } from './services/mockData';
+import { logoutUser, getSession } from './auth';
 
 const App = () => {
 
@@ -24,8 +24,18 @@ const App = () => {
     setActiveTab('workspace');
   };
 
+  // Auto-login if a session exists in localStorage
+  useEffect(() => {
+    const session = getSession();
+    if (session) {
+      setUser(session as User);
+      setView('list');
+      setActiveTab('workspace');
+    }
+  }, []);
+
   const handleLogout = () => {
-    logout();
+    logoutUser();
     setUser(null);
   };
 

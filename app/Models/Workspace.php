@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Note;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class Workspace extends Model {

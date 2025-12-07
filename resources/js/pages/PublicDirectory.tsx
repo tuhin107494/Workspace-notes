@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Note } from '../types';
-import { getPublicNotes, voteNote } from '../services/mockData';
+import { getPublicNotes, voteNote } from '../services/apiClient';
 import NoteCard from '../components/NoteCard';
 
 const PublicDirectory: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'newest' | 'oldest' | 'popular' | 'downvotes'>('popular');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     loadNotes();
@@ -16,17 +19,36 @@ const PublicDirectory: React.FC = () => {
 
   const loadNotes = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await getPublicNotes(search, sort);
-      setNotes(data);
+      const { items, next_cursor } = await getPublicNotes(search, sort, 24);
+      setNotes(items);
+      setNextCursor(next_cursor ?? null);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load public notes');
     } finally {
       setLoading(false);
     }
   };
 
+  const loadMore = async () => {
+    if (!nextCursor) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const { items, next_cursor } = await getPublicNotes(search, sort, 24, nextCursor);
+      setNotes(prev => [...prev, ...items]);
+      setNextCursor(next_cursor ?? null);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load more notes');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const handleVote = async (id: string, type: 'up' | 'down') => {
-    await voteNote(id, type);
-    // Optimistic update
+    // Optimistic UI update then call API; revert on failure
+    const previous = notes;
     setNotes(prev => prev.map(n => {
       if (n.id === id) {
         return {
@@ -37,6 +59,18 @@ const PublicDirectory: React.FC = () => {
       }
       return n;
     }));
+
+    try {
+      const resp = await voteNote(id, type);
+      // If API returns authoritative counts, patch the note
+      if (resp && typeof resp.up === 'number') {
+        setNotes(prev => prev.map(n => n.id === id ? ({ ...n, upvotes: resp.up, downvotes: resp.down }) : n));
+      }
+    } catch (err: any) {
+      // revert optimistic update
+      setNotes(previous);
+      setError(err?.message || 'Failed to submit vote');
+    }
   };
 
   return (
@@ -93,6 +127,7 @@ const PublicDirectory: React.FC = () => {
           ))}
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {notes.map(note => (
             <NoteCard 
@@ -113,6 +148,19 @@ const PublicDirectory: React.FC = () => {
             </div>
           )}
         </div>
+
+        {error && (
+          <div className="col-span-full text-center text-red-600 mt-4">{error}</div>
+        )}
+
+        {nextCursor && (
+          <div className="col-span-full flex justify-center mt-6">
+            <button onClick={loadMore} disabled={loadingMore} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+              {loadingMore ? 'Loading...' : 'Load more'}
+            </button>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

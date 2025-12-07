@@ -11,7 +11,14 @@ class StoreNoteRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        // Only authenticated users who own the workspace may create notes in it
+        $user = auth()->user();
+        if (!$user) return false;
+
+        $workspaceId = $this->input('workspaceId') ?? $this->route('workspace');
+        if (!$workspaceId) return true; // let validator handle missing workspace_id
+
+        return \App\Models\Workspace::where('id', $workspaceId)->where('user_id', $user->id)->exists();
     }
 
     /**
@@ -21,10 +28,11 @@ class StoreNoteRequest extends FormRequest
      */
      public function rules() {
         return [
-            'workspace_id' => 'required|exists:workspaces,id',
+            'workspaceId' => 'required|exists:workspaces,id',
             'title'        => 'required|string|max:255',
             'content'      => 'required|string',
             'type'         => 'required|in:public,private',
+            'is_draft'     => 'sometimes|boolean',
             'tags'         => 'array',
             'tags.*'       => 'string|max:50'
         ];
