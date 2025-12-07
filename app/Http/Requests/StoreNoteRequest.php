@@ -19,10 +19,14 @@ class StoreNoteRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
-    {
+     public function rules() {
         return [
-            //
+            'workspace_id' => 'required|exists:workspaces,id',
+            'title'        => 'required|string|max:255',
+            'content'      => 'required|string',
+            'type'         => 'required|in:public,private',
+            'tags'         => 'array',
+            'tags.*'       => 'string|max:50'
         ];
     }
 }

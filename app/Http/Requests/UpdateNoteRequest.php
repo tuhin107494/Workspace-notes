@@ -19,10 +19,13 @@ class UpdateNoteRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
-    {
+     public function rules() {
         return [
-            //
+            'title'   => 'sometimes|string|max:255',
+            'content' => 'sometimes|string',
+            'type'    => 'sometimes|in:public,private',
+            'tags'    => 'sometimes|array',
+            'tags.*'  => 'string|max:50'
         ];
     }
 }
