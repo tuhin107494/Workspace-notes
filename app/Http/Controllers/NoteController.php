@@ -120,7 +120,9 @@ class NoteController extends Controller
         // Determine workspace scope from route or query
         $workspaceParam = $request->route('workspace') ?? $request->query('workspaceId');
 
+       
         if ($workspaceParam) {
+            
             $query->where('workspace_id', $workspaceParam);
 
             // If the authenticated user owns the workspace, allow drafts to be visible
@@ -134,8 +136,10 @@ class NoteController extends Controller
                 $query->where('is_draft', false);
             }
         } else {
+            
             // Global/public listing -> only published notes
-            $query->where('is_draft', false);
+            $query->where('is_draft',  false);
+            $query->where('type', 'public');
         }
 
         if ($lastId) {
